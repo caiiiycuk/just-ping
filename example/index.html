@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Ping Test</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #results {
+            margin-top: 20px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Ping Test</h1>
+    <div>Status: <span id="status">Disconnected</span></div>
+    <div>Last RTT: <span id="rtt">-</span> ms</div>
+    <div>Average RTT: <span id="avg-rtt">-</span> ms</div>
+    <div id="results"></div>
+
+    <script>
+        let ws;
+        let pingStart;
+        let rttSum = 0;
+        let pingCount = 0;
+        
+        function connect() {
+            ws = new WebSocket('ws://127.0.0.1:7777/ping');
+            
+            ws.onopen = () => {
+                document.getElementById('status').textContent = 'Connected';
+                sendPing();
+            };
+            
+            ws.onclose = () => {
+                document.getElementById('status').textContent = 'Disconnected';
+                setTimeout(connect, 1000); // Reconnect after 1 second
+            };
+            
+            ws.onmessage = (event) => {
+                if (event.data === 'Ok') {
+                    const rtt = Date.now() - pingStart;
+                    rttSum += rtt;
+                    pingCount++;
+                    
+                    document.getElementById('rtt').textContent = rtt;
+                    document.getElementById('avg-rtt').textContent = Math.round(rttSum / pingCount);
+                    
+                    const result = document.createElement('div');
+                    result.textContent = `Ping ${pingCount}: ${rtt}ms`;
+                    document.getElementById('results').prepend(result);
+                    
+                    // Send next ping after 1 second
+                    setTimeout(sendPing, 1000);
+                }
+            };
+        }
+        
+        function sendPing() {
+            if (ws.readyState === WebSocket.OPEN) {
+                pingStart = Date.now();
+                ws.send('ping');
+            }
+        }
+        
+        connect();
+    </script>
+</body>
+</html>
